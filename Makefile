@@ -1,45 +1,57 @@
 # change to your local directories!
-PD_APP_DIR = /Applications/Pd-extended.app/Contents/Resources
-GEM_DIR = /Users/matthias/Gem-0.93.1
 
-CPPFLAGS = -I$(GEM_DIR)/src -I$(PD_APP_DIR)/include
+#PD_DIR = /Applications/Pd.app/Contents/Resources
+#GEM_DIR = /Users/matthias/Gem
 
-#linux doesnt work yet
+#PD_DIR = /home/matthias/pd
+#GEM_DIR = /home/matthias/Gem
+#OPEN_NI_DIR = /home/matthias/OpenNI-Bin-Dev-Linux-x86-v1.3.4.6
+PD_DIR = /home/roikr/pure-data
+GEM_DIR = /home/roikr/Gem-0.93.3
+OPEN_NI_DIR = /home/roikr/OpenNI2
+
+# build flags
+
+INCLUDES =  -I$(PD_DIR)/src -I. -I$(OPEN_NI_DIR)/Include -I$(GEM_DIR)/src -I$(PD_DIR)/src
+CPPFLAGS  = -fPIC -DPD -O2 -funroll-loops -fomit-frame-pointer  -ffast-math \
+    -Wall -W -Wno-unused -Wno-parentheses -Wno-switch 
+    -DGEM_OPENCV_VERSION=\"$(GEM_OPENCV_VERSION)\" -g
+
+
 UNAME := $(shell uname -s)
 ifeq ($(UNAME),Linux)
- CPPFLAGS += -I/usr/include/ni
- CXXFLAGS = -g -O2 -fPIC -freg-struct-return -Os -falign-loops=32 -falign-functions=32 -falign-jumps=32 -funroll-loops -ffast-math -mmmx -fpascal-strings 
- LDFLAGS = -shared -rdynamic
- LIBS = -lOpenNI
+ CPPFLAGS += -DLINUX
+ INCLUDES += ``
+ LDFLAGS =  -L/usr/local/lib  -export_dynamic -shared -lOpenNI2
+ LIBS = -lOpenNI2
  EXTENSION = pd_linux
- USER_EXTERNALS=$(HOME)/pd-externals
 endif
 ifeq ($(UNAME),Darwin)
- CPPFLAGS += -I/sw/include/ni
- CXXFLAGS = -g -fast -msse3 -arch i386
- LDFLAGS = -arch i386 -bundle -bundle_loader $(PD_APP_DIR)/bin/pd -undefined dynamic_lookup -mmacosx-version-min=10.6 -L/sw/lib
- LIBS = -lm -lOpenNI
+ CPPFLAGS += -DDARWIN
+ INCLUDES += -I
+ LDFLAGS =  -arch i386 -bundle -undefined dynamic_lookup -flat_namespace 
+ LIBS =  -lm -lOpenNI
  EXTENSION = pd_darwin
- USER_EXTERNALS=$(HOME)/Library/Pd
 endif
 
 .SUFFIXES = $(EXTENSION)
 
-SOURCES = pix_openni
+SOURCES = pix_openni.cc
 
-all:
-	g++ $(CPPFLAGS) $(CXXFLAGS) -o $(SOURCES).o -c $(SOURCES).cc
-	g++ -o $(SOURCES).$(EXTENSION) $(LDFLAGS) $(SOURCES).o $(LIBS)
-	rm -fr ./*.o
+all: $(SOURCES:.cc=.$(EXTENSION)) $(SOURCES_OPT:.cc=.$(EXTENSION))
 
-deploy:
-	install -d $(USER_EXTERNALS)/pix_openni
-	install -p *.pd $(USER_EXTERNALS)/pix_openni
-	install -p $(SOURCES).$(EXTENSION) $(USER_EXTERNALS)/pix_openni
+%.$(EXTENSION): %.o
+	gcc $(LDFLAGS) -o $*.$(EXTENSION) $*.o $(LIBS)
+
+.cc.o:
+	g++ $(CPPFLAGS) $(INCLUDES) -o $*.o -c $*.cc
+
+.c.o:
+	gcc $(CPPFLAGS) $(INCLUDES) -o $*.o -c $*.c
 
 clean:
-	rm -f $(SOURCES)*.o
-	rm -f $(SOURCES)*.$(EXTENSION)
+	rm -f pix_openni*.o
+	rm -f pix_openni*.$(EXTENSION)
 
 distro: clean all
 	rm *.o

@@ -27,9 +27,8 @@ LOG
 #include <vector>
 #include <stdint.h>
 
-#include "XnCodecIDs.h"
-#include "XnOpenNI.h"
-#include "XnCppWrapper.h"
+#include "OpenNI.h"
+
 
 #include "Base/GemBase.h"
 #include "Gem/Properties.h"
@@ -37,7 +36,7 @@ LOG
 #include "Base/GemPixObj.h"
 
 
-using namespace xn;
+using namespace openni;
 /*-----------------------------------------------------------------
 -------------------------------------------------------------------
 CLASS
@@ -68,30 +67,14 @@ class GEM_EXTERN pix_openni : public GemBase
     
     	t_outlet 	*m_dataout;
 			
-			void 				outputJoint (XnUserID player, XnSkeletonJoint eJoint);
 			
-			bool m_osc_output;
-			bool m_real_world_coords;
-			bool m_output_euler;
-			bool m_auto_calibration;
-    
-    Context g_context;
     Device g_Device;
-    ScriptNode g_scriptNode;
-    DepthGenerator g_depth;
-    ImageGenerator g_image;
-    DepthMetaData g_depthMD;
-    ImageMetaData g_imageMD;
-    SceneMetaData g_sceneMD;
+    VideoStream g_depth;
+    VideoStream g_image;
+    VideoFrameRef g_depthFrame;
+    VideoFrameRef g_imageFrame;
     
-    Recorder g_recorder;
-    
-    UserGenerator g_UserGenerator;
-    Player g_player;
-    
-    HandsGenerator g_HandsGenerator;
-    GestureGenerator gestureGenerator;
-    
+   
     int device_id;
     
     protected:
@@ -112,59 +95,37 @@ class GEM_EXTERN pix_openni : public GemBase
     	
 	//////////
     	// Settings/Info
-    	//void 				outputJoint (XnUserID player, XnSkeletonJoint eJoint);
-    	void				VideoModeMess(int argc, t_atom*argv);
-			void				DepthModeMess(int argc, t_atom*argv);
-    	void	    	bangMess();
+    	void	    	     bangMess();
     	
-			void				renderDepth(int argc, t_atom*argv);
+		void				renderDepth(int argc, t_atom*argv);
 			
 			
   // Settings
-  		int x_dim;
+  		
 
-			int openni_ready;
+		int openni_ready;
 			
-        bool m_player; //playback started?
-    
-        bool m_recorder;  // recorder started?
     
       bool rgb_started;
       bool depth_started;
       bool audio_started;
-			bool usergen_started;
-      bool skeleton_started;
-      bool hand_started;
+	
       
       bool rgb_wanted;
+      int rgb_index;
       bool depth_wanted;
-      bool audio_wanted;
-      bool skeleton_wanted;
-			bool usergen_wanted;
-      bool hand_wanted;
-			
-			bool m_registration_wanted;
-			bool m_registration;
-			bool m_usercoloring;
-
-			float m_skeleton_smoothing;
-			float m_hand_smoothing;
+      int depth_index;
       
-			int	depth_output;
-			int	req_depth_output;
+      float min_thresh;
+      float max_thresh;
+      
 			
-			std::string m_filename;
-        
-			int 		m_width;
-			int			m_height;
-			
-			XnCallbackHandle hUserCallbacks, hHandsCallbacks, hGestureCallbacks; // Hands
-			XnCallbackHandle hCalibrationStart, hCalibrationComplete, hPoseDetected, hCalibrationInProgress, hPoseInProgress, hUserGeneratorNewData; // Skeleton
-			
-			XnChar strRequiredCalibrationPose[XN_MAX_NAME_LENGTH];
+	bool m_registration_wanted;
+	bool m_registration;
 	
-			bool      m_rendering; // "true" when rendering is on, false otherwise
-    
+	int	depth_output;
+	int	req_depth_output;	
+	
     	//////////
     	// The pixBlock with the current image
     	pixBlock    	m_image;
@@ -172,45 +133,18 @@ class GEM_EXTERN pix_openni : public GemBase
     	
     	GemState					*depth_state;
     	
-			//////////
-			// The current image
-			imageStruct     m_imageStruct;
-			
-			
-			
+						
     private:
     	//////////
     	// Static member functions
-    	static void			VideoModeMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
-			static void			DepthModeMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
     	static void    	bangMessCallback(void *data);
-    	
-			static void    	openMessCallback(void *data, std::string filename);
-			static void    	floatPlayMessCallback(void *data, float value);
-			static void    	floatPlaybackSpeedMessCallback(void *data, float value);
-			static void    	floatJumpToImageFrameMessCallback(void *data, float value);
-			static void    	floatJumpToDepthFrameMessCallback(void *data, float value);
-			static void    	floatRecordMessCallback(void *data, float value);
-			static void    	floatRealWorldCoordsMessCallback(void *data, float value);
-			static void    	floatRegistrationMessCallback(void *data, float value);
-			static void    	floatRgbRegistrationMessCallback(void *data, float value);
-			static void    	floatOscOutputMessCallback(void *data, float osc_output);
-			static void    	floatSkeletonSmoothingMessCallback(void *data, float value);
-			static void    	floatHandSmoothingMessCallback(void *data, float value);
-			static void    	floatEulerOutputMessCallback(void *data, float value);
-			static void    	StartUserMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
-			static void    	StopUserMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
-			static void    	floatAutoCalibrationMessCallback(void *data, float value);
-			static void    	floatUserColoringMessCallback(void *data, float value);
-			static void    	UserInfoMessCallback(void *data);
-    	static void    	floatRgbMessCallback(void *data, float rgb);
+		static void    	floatRgbMessCallback(void *data, float rgb);
     	static void    	floatDepthMessCallback(void *data, float depth);
-    	static void    	floatUsergenMessCallback(void *data, float value);
-    	static void    	floatSkeletonMessCallback(void *data, float skeleton);
-    	static void    	floatHandMessCallback(void *data, float hand);
     	static void    	floatDepthOutputMessCallback(void *data, float depth_output);
-    	static void    	renderDepthCallback(void *data, t_symbol*s, int argc, t_atom*argv);
-    	
+    	static void     floatMinMessCallback(void *data,float min_thresh);
+        static void     floatMaxMessCallback(void *data,float max_thresh);
+        static void    	renderDepthCallback(void *data, t_symbol*s, int argc, t_atom*argv);
+
 			t_outlet        *m_depthoutlet; 
 			t_inlet         *m_depthinlet;
 
